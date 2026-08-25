@@ -117,7 +117,7 @@ _errorcat() {
 _dispwidth() {
     local s=$1 w=0 i c cp
     for ((i = 0; i < ${#s}; i++)); do
-        c=${s:$i:1}
+        c=${s:i:1}
         printf -v cp '%d' "'$c"
         if ((cp == 0xFE0F)); then
             ((w += 1)) # 变体选择符：补足前一字符到宽
