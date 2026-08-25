@@ -24,6 +24,12 @@ esac
 EOF
 chmod +x "$test_root/bin/curl"
 
+cat >"$test_root/bin/fzf" <<'EOF'
+#!/bin/sh
+/usr/bin/head -n 1
+EOF
+chmod +x "$test_root/bin/fzf"
+
 cat >"$test_root/yq" <<'EOF'
 #!/bin/sh
 case " $* " in
@@ -53,6 +59,11 @@ BIN_YQ=$2
 PATH=$3
 export PATH
 shift 3
+
+if [ "${1:-}" = --force-fzf ]; then
+    _node_has_fzf() { return 0; }
+    shift
+fi
 
 if [ -n "${ZSH_VERSION:-}" ]; then
     caller_array=(first second)
@@ -94,6 +105,7 @@ for shell in bash zsh; do
     command -v "$shell" >/dev/null 2>&1 || continue
     run_case "$shell" 'lists groups' 'Selector' node ls
     run_case "$shell" 'switches a node' '已切换 \[proxy\] → node' node use proxy node
+    run_case "$shell" 'selects through fzf' '已切换 \[proxy\]' --force-fzf node
 done
 
 if [ "$errors" -eq 0 ]; then

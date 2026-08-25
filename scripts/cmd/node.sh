@@ -465,7 +465,7 @@ _node_pick_group() {
     done
 
     if _node_has_fzf; then
-        local selected status preview_dir preview_args=()
+        local selected fzf_status preview_dir preview_args=()
         preview_dir=$(_node_fzf_preview_dir)
         if [ -n "$preview_dir" ]; then
             preview_args=(--preview "$(_node_fzf_preview_cmd)" --preview-window='right:45%:wrap')
@@ -512,9 +512,9 @@ _node_pick_group() {
                 --header='选择策略组，Enter 确认，Esc 退出' \
                 "${preview_args[@]}"
         )
-        status=$?
+        fzf_status=$?
         [ -n "$preview_dir" ] && rm -rf -- "$preview_dir"
-        [ "$status" -eq 0 ] || return 1
+        [ "$fzf_status" -eq 0 ] || return 1
         [ -n "$selected" ] || return 1
         _node_selected_name "$selected"
         return 0
@@ -566,7 +566,7 @@ _node_pick_proxy() {
     done
 
     if _node_has_fzf; then
-        local selected status preview_dir preview_args=()
+        local selected fzf_status preview_dir preview_args=()
         preview_dir=$(_node_fzf_preview_dir)
         if [ -n "$preview_dir" ]; then
             preview_args=(--preview "$(_node_fzf_preview_cmd)" --preview-window='right:45%:wrap')
@@ -595,9 +595,9 @@ _node_pick_proxy() {
                 --header='选择节点，Enter 确认，Esc 退出' \
                 "${preview_args[@]}"
         )
-        status=$?
+        fzf_status=$?
         [ -n "$preview_dir" ] && rm -rf -- "$preview_dir"
-        [ "$status" -eq 0 ] || return 1
+        [ "$fzf_status" -eq 0 ] || return 1
         [ -n "$selected" ] || return 1
         _node_selected_name "$selected"
         return 0
@@ -673,7 +673,7 @@ _node_pick_member() {
             [ -n "$name" ] && proxy_types["$name"]=$type
         done < <(_node_proxies)
 
-        local status preview_dir preview_args=()
+        local fzf_status preview_dir preview_args=()
         preview_dir=$(_node_fzf_preview_dir)
         if [ -n "$preview_dir" ]; then
             preview_args=(--preview "$(_node_fzf_preview_cmd)" --preview-window='right:45%:wrap')
@@ -723,9 +723,9 @@ _node_pick_member() {
                 --header="$fzf_header" \
                 "${preview_args[@]}"
         )
-        status=$?
+        fzf_status=$?
         [ -n "$preview_dir" ] && rm -rf -- "$preview_dir"
-        [ "$status" -eq 0 ] || return 1
+        [ "$fzf_status" -eq 0 ] || return 1
         [ -n "$selected" ] || return 1
         _node_selected_name "$selected"
         return 0
