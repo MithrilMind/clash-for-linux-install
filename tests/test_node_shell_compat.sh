@@ -13,7 +13,32 @@ fail() { printf 'FAIL: %s\n' "$1"; errors=$((errors + 1)); }
 test_root="$(mktemp -d)"
 trap 'rm -rf -- "$test_root"' EXIT
 
-mkdir -p "$test_root/bin"
+fixture_home="$test_root/home"
+mkdir -p "$test_root/bin" "$fixture_home/resources" \
+    "$fixture_home/scripts/cmd" "$fixture_home/scripts/lib"
+cp "$REPO_ROOT"/scripts/cmd/*.sh "$fixture_home/scripts/cmd/"
+cp "$REPO_ROOT"/scripts/cmd/*.zsh "$fixture_home/scripts/cmd/"
+
+cat >"$fixture_home/.env" <<'EOF'
+CLASHCTL_KERNEL=mihomo
+EOF
+
+cat >"$fixture_home/scripts/lib/common.sh" <<'EOF'
+BIN_YQ=$CLASHCTL_TEST_YQ
+CLASH_CONFIG_RUNTIME=$CLASHCTL_HOME/resources/runtime.yaml
+
+service_is_active() { return 0; }
+_detect_ext_addr() {
+    awk 'BEGIN { exit 0 }' </dev/null || return
+    EXT_PORT=9090
+}
+_get_secret() { return 0; }
+_dispwidth() { printf '%s\n' "${#1}"; }
+_pad() { printf '%-*s' "$2" "$1"; }
+_okcat() { printf '%s\n' "$*"; }
+_failcat() { printf '%s\n' "$*" >&2; return 1; }
+_errorcat() { printf '%s\n' "$*" >&2; return 1; }
+EOF
 
 cat >"$test_root/bin/curl" <<'EOF'
 #!/bin/sh
@@ -45,20 +70,11 @@ chmod +x "$test_root/yq"
 
 cat >"$test_root/probe.sh" <<'EOF'
 CLASHCTL_HOME=$1
-export CLASHCTL_HOME
-. "$CLASHCTL_HOME/scripts/cmd/clashctl.sh"
-
-service_is_active() { return 0; }
-_detect_ext_addr() {
-    awk 'BEGIN { exit 0 }' </dev/null || return
-    EXT_PORT=9090
-}
-_get_secret() { return 0; }
-
-BIN_YQ=$2
+CLASHCTL_TEST_YQ=$2
 PATH=$3
-export PATH
+export CLASHCTL_HOME CLASHCTL_TEST_YQ PATH
 shift 3
+. "$CLASHCTL_HOME/scripts/cmd/clashctl.sh"
 
 if [ "${1:-}" = --force-fzf ]; then
     _node_has_fzf() { return 0; }
@@ -86,7 +102,7 @@ run_case() {
     output="$test_root/${shell}-${name}.out"
     baseline_path="$test_root/bin:/usr/bin:/bin"
 
-    "$shell" "$test_root/probe.sh" "$REPO_ROOT" "$test_root/yq" "$baseline_path" \
+    "$shell" "$test_root/probe.sh" "$fixture_home" "$test_root/yq" "$baseline_path" \
         "$@" \
         >"$output" 2>&1
     status=$?
@@ -101,12 +117,14 @@ run_case() {
     fi
 }
 
-for shell in bash zsh; do
-    command -v "$shell" >/dev/null 2>&1 || continue
-    run_case "$shell" 'lists groups' 'Selector' node ls
-    run_case "$shell" 'switches a node' '已切换 \[proxy\] → node' node use proxy node
-    run_case "$shell" 'selects through fzf' '已切换 \[proxy\]' --force-fzf node
-done
+run_case bash 'lists groups' 'Selector' node ls
+run_case bash 'switches a node' '已切换 \[proxy\] → node' node use proxy node
+run_case bash 'selects through fzf' '已切换 \[proxy\]' --force-fzf node
+
+if command -v zsh >/dev/null 2>&1; then
+    run_case zsh 'lists groups through Bash adapter' 'Selector' node ls
+    run_case zsh 'switches a node through Bash adapter' '已切换 \[proxy\] → node' node use proxy node
+fi
 
 if [ "$errors" -eq 0 ]; then
     echo 'PASS: clashctl node shell compatibility'

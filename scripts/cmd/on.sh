@@ -92,3 +92,12 @@ _dump_proxy_env_fish() {
         printf "set -gx %s '%s'\n" "$v" "$val"
     done
 }
+
+_dump_proxy_env_zsh() {
+    local v val
+    for v in http_proxy HTTP_PROXY https_proxy HTTPS_PROXY all_proxy ALL_PROXY no_proxy NO_PROXY; do
+        val=${!v}
+        [ -z "$val" ] && continue
+        printf 'export %s=%q\n' "$v" "$val"
+    done
+}
