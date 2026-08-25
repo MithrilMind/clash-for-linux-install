@@ -1,7 +1,12 @@
 #!/usr/bin/env bash
 
 clashon() {
-    case "$1" in
+    if [ "${CLASHCTL_MANAGE_SHELL_PROXY:-1}" = 0 ] && [ "$#" -eq 0 ]; then
+        on_service_only
+        return
+    fi
+
+    case "${1:-}" in
     -e | --env-only)
         on_env_only
         ;;

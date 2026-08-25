@@ -108,10 +108,36 @@ output=$(zsh -f "$test_root/probe.zsh" "$test_root" 2>&1)
 status=$?
 printf '%s\n' "$output"
 
-if [ "$status" -eq 0 ] && [ "$output" = adapter-ok ]; then
+if [ "$status" -ne 0 ] || [ "$output" != adapter-ok ]; then
+    echo "FAIL: Zsh Bash adapter (status $status)"
+    exit 1
+fi
+
+cat >"$test_root/probe.bash" <<'EOF'
+CLASHCTL_HOME=$1
+export CLASHCTL_HOME CLASHCTL_MANAGE_SHELL_PROXY=0
+. "$CLASHCTL_HOME/scripts/cmd/clashctl.sh"
+
+unset http_proxy https_proxy all_proxy
+clashctl on >/dev/null 2>&1 || exit
+[ -z "${http_proxy+x}${https_proxy+x}${all_proxy+x}" ] || {
+    printf '%s\n' 'Bash clashctl on overwrote externally managed proxy variables' >&2
+    exit 98
+}
+
+export http_proxy=owned-by-env-setup
+clashctl off >/dev/null 2>&1 || exit
+[ "$http_proxy" = owned-by-env-setup ] || {
+    printf '%s\n' 'Bash clashctl off cleared externally managed proxy variables' >&2
+    exit 99
+}
+EOF
+
+if bash "$test_root/probe.bash" "$test_root"; then
     echo 'PASS: Zsh delegates clashctl implementation to Bash'
+    echo 'PASS: Bash honors external proxy ownership'
     exit 0
 fi
 
-echo "FAIL: Zsh Bash adapter (status $status)"
+echo 'FAIL: Bash external proxy ownership'
 exit 1
